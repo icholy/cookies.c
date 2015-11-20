@@ -87,3 +87,72 @@ char *cookies_lookup(const char* text, const char *key) {
     }
     return strndup(lookup.result.value, lookup.result.value_length);
 }
+
+
+typedef struct {
+    char *key;
+    char *value;
+} cookies_entry_t;
+
+typedef struct {
+    size_t length;
+    size_t capacity;
+    cookies_entry_t *entries;
+} cookies_jar_t;
+
+void cookies_jar_init(cookies_jar_t *jar, size_t capacity) {
+    jar->length = 0;
+    jar->capacity = capacity;
+    jar->entries = (cookies_entry_t*)malloc(sizeof(cookies_entry_t)*capacity);
+}
+
+int cookies_handle_loads(cookies_pair_t pair, void *data) {
+    cookies_jar_t *jar = (cookies_jar_t*)data;
+
+    size_t len = jar->length;
+    size_t cap = jar->capacity;
+
+    // if there is not enough space, double the capacity
+    if (len == cap) {
+        cap = cap * 2;
+        jar->capacity = cap;
+        jar->entries = (cookies_entry_t*)realloc(jar->entries, sizeof(cookies_jar_t) * cap);
+        if (!jar->entries) {
+            return 1;
+        }
+    }
+
+    cookies_entry_t *entry = &jar->entries[jar->length];
+    jar->length++;
+
+    entry->key   = strndup(pair.key, pair.key_length);
+    entry->value = strndup(pair.value, pair.value_length);
+    if (!entry->key || !entry->value) {
+        return 1;
+    }
+    return 0;
+}
+
+void cookies_jar_clear(cookies_jar_t *jar) {
+
+    size_t len = jar->length;
+    size_t i;
+    cookies_entry_t *entry;
+
+    for (i = 0; i < len; i++) {
+        free(jar->entries[i].key);
+        free(jar->entries[i].value);
+    }
+
+    jar->capacity = 0;
+    jar->length = 0;
+
+    free(jar->entries);
+}
+
+cookies_jar_t cookies_loads(const char *text) {
+    cookies_jar_t jar;
+    cookies_jar_init(&jar, 0);
+    cookies_parse(text, cookies_handle_loads, &jar);
+    return jar;
+}
