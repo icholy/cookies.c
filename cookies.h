@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
+#include <stdlib.h>
 
 typedef struct {
     const char* key;
@@ -9,40 +10,55 @@ typedef struct {
     size_t      value_length;
 } cookies_pair_t;
 
+static void cookies_pair_trim_whitespace(cookies_pair_t *pair) {
+    while (isspace(*pair->key)) {
+        pair->key++;
+        pair->key_length--;
+    }
+    while (isspace(pair->key[pair->key_length - 1])) {
+        pair->key_length--;
+    }
+    while (isspace(*pair->value)) {
+        pair->value++;
+        pair->value_length--;
+    }
+    while (isspace(pair->value[pair->value_length - 1])) {
+        pair->value_length--;
+    }
+}
+
 typedef int (*cookie_handler_t)(const cookies_pair_t pair, void *userdata);
 
 int cookies_parse(const char* text, cookie_handler_t handler, void *userdata) {
 
-    const char *pos = text;
-    const char *end = text + strlen(text);
+    const char *text_pos = text;
+    const char *text_end = text + strlen(text);
 
-    const char *eq_p;
-    const char *semi_p;
+    const char *key_end;
+    const char *value_end;
 
     cookies_pair_t pair;
 
-    while (pos < end) {
-
-        // Seek to first non-whitespace character
-        while (isspace(*pos)) {
-            pos++;
-        }
+    while (text_pos < text_end) {
 
         // Find the key
-        eq_p = strchr(pos, '=');
-        if (!eq_p) {
-            return 1;
+        key_end = strchr(text_pos, '=');
+        if (!key_end) {
+            break;
         }
-        pair.key = pos;
-        pair.key_length = size_t(eq_p - pair.key);
+        pair.key = text_pos;
+        pair.key_length = (size_t)(key_end - pair.key);
 
         // Find the value
-        semi_p = strchr(eq_p, ';');
-        if (!semi_p) {
-            return 1;
+        value_end = strchr(key_end, ';');
+        if (!value_end) {
+            value_end = text_end;
         }
-        pair.value = eq_p + 1;
-        pair.value_length = size_t(semi_p - pair.value - 1);
+        pair.value = key_end + 1;
+        pair.value_length = (size_t)(value_end - pair.value);
+
+        // trim whitespace
+        cookies_pair_trim_whitespace(&pair);
 
         // invoke callback
         int res = handler(pair, userdata);
@@ -51,107 +67,34 @@ int cookies_parse(const char* text, cookie_handler_t handler, void *userdata) {
         }
 
         // move the position to the next key/value pair
-        pos = semi_p + 1;
+        text_pos = value_end + 1;
     }
 
     return 0;
 }
 
-typedef struct {
-    bool           found;
-    const char     *key;
-    cookies_pair_t result;
+static typedef struct {
+    const char *key;
+    char *value;
 } cookies_lookup_t;
 
 static int cookies_handle_lookup(const cookies_pair_t pair, void *data) {
     cookies_lookup_t *lookup = (cookies_lookup_t*)data;
     if (strncmp(lookup->key, pair.key, pair.key_length) == 0) {
-        lookup->found = true;
-        lookup->result = pair;
+        lookup->value = strndup(pair.value, pair.value_length);
         return 1;
     }
     return 0;
 }
 
 static void cookies_init_lookup(cookies_lookup_t *lookup, const char* key) {
-    lookup->found = false;
     lookup->key = key;
+    lookup->value = NULL;
 }
 
 char *cookies_lookup(const char* text, const char *key) {
     cookies_lookup_t lookup;
     cookies_init_lookup(&lookup, key);
     cookies_parse(text, cookies_handle_lookup, &lookup);
-    if (!lookup.found) {
-        return NULL;
-    }
-    return strndup(lookup.result.value, lookup.result.value_length);
-}
-
-typedef struct {
-    char *key;
-    char *value;
-} cookies_entry_t;
-
-typedef struct {
-    size_t length;
-    size_t capacity;
-    cookies_entry_t *entries;
-} cookies_jar_t;
-
-void cookies_jar_init(cookies_jar_t *jar, size_t capacity) {
-    jar->length = 0;
-    jar->capacity = capacity;
-    jar->entries = (cookies_entry_t*)malloc(sizeof(cookies_entry_t)*capacity);
-}
-
-int cookies_handle_loads(cookies_pair_t pair, void *data) {
-    cookies_jar_t *jar = (cookies_jar_t*)data;
-
-    size_t len = jar->length;
-    size_t cap = jar->capacity;
-
-    // if there is not enough space, double the capacity
-    if (len == cap) {
-        cap = cap * 2;
-        jar->capacity = cap;
-        jar->entries = (cookies_entry_t*)realloc(jar->entries, sizeof(cookies_jar_t) * cap);
-        if (!jar->entries) {
-            return 1;
-        }
-    }
-
-    cookies_entry_t *entry = &jar->entries[jar->length];
-    jar->length++;
-
-    entry->key   = strndup(pair.key, pair.key_length);
-    entry->value = strndup(pair.value, pair.value_length);
-    if (!entry->key || !entry->value) {
-        return 1;
-    }
-    return 0;
-}
-
-void cookies_jar_clear(cookies_jar_t *jar) {
-
-    size_t len = jar->length;
-    size_t i;
-    cookies_entry_t *entry;
-
-    for (i = 0; i < len; i++) {
-        free(jar->entries[i].key);
-        free(jar->entries[i].value);
-    }
-
-    jar->capacity = 0;
-    jar->length = 0;
-
-    free(jar->entries);
-}
-
-cookies_jar_t cookies_loads(const char *text) {
-    cookies_jar_t jar;
-    cookies_jar_init(&jar, 1);
-    cookies_parse(text, cookies_handle_loads, &jar);
-    return jar;
+    return lookup.value;
 }
