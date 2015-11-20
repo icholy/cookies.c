@@ -88,7 +88,6 @@ char *cookies_lookup(const char* text, const char *key) {
     return strndup(lookup.result.value, lookup.result.value_length);
 }
 
-
 typedef struct {
     char *key;
     char *value;
@@ -152,7 +151,7 @@ void cookies_jar_clear(cookies_jar_t *jar) {
 
 cookies_jar_t cookies_loads(const char *text) {
     cookies_jar_t jar;
-    cookies_jar_init(&jar, 0);
+    cookies_jar_init(&jar, 1);
     cookies_parse(text, cookies_handle_loads, &jar);
     return jar;
 }
