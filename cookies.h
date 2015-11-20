@@ -88,7 +88,7 @@ typedef struct {
 
 static int cookies_handle_lookup(const cookies_pair_t pair, void *data) {
     cookies_lookup_t *lookup = (cookies_lookup_t*)data;
-    if (strncmp(lookup->key, pair.key, pair.key_length) == 0) {
+    if (strncasecmp(lookup->key, pair.key, pair.key_length) == 0) {
         lookup->value = cookies_pair_value(pair);
         return 1;
     }
@@ -102,6 +102,7 @@ static void cookies_init_lookup(cookies_lookup_t *lookup, const char* key) {
 
 char *cookies_lookup(const char* text, const char *key) {
     cookies_lookup_t lookup;
+
     cookies_init_lookup(&lookup, key);
     cookies_parse(text, cookies_handle_lookup, &lookup);
     return lookup.value;
