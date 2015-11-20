@@ -63,7 +63,7 @@ typedef struct {
     cookies_pair_t result;
 } cookies_lookup_t;
 
-static int cookies_handle_find_key(const cookies_pair_t pair, void *data) {
+static int cookies_handle_lookup(const cookies_pair_t pair, void *data) {
     cookies_lookup_t *lookup = (cookies_lookup_t*)data;
     if (strncmp(lookup->key, pair.key, pair.key_length) == 0) {
         lookup->found = true;
@@ -73,7 +73,7 @@ static int cookies_handle_find_key(const cookies_pair_t pair, void *data) {
     return 0;
 }
 
-void cookies_init_lookup(cookies_lookup_t *lookup, const char* key) {
+static void cookies_init_lookup(cookies_lookup_t *lookup, const char* key) {
     lookup->found = false;
     lookup->key = key;
 }
@@ -81,7 +81,7 @@ void cookies_init_lookup(cookies_lookup_t *lookup, const char* key) {
 char *cookies_lookup(const char* text, const char *key) {
     cookies_lookup_t lookup;
     cookies_init_lookup(&lookup, key);
-    cookies_parse(text, cookies_handle_find_key, &lookup);
+    cookies_parse(text, cookies_handle_lookup, &lookup);
     if (!lookup.found) {
         return NULL;
     }
