@@ -10,6 +10,14 @@ typedef struct {
     size_t      value_length;
 } cookies_pair_t;
 
+static char *cookies_pair_key(cookies_pair_t pair) {
+  return strndup(pair.key, pair.key_length);
+}
+
+static char *cookies_pair_value(cookies_pair_t pair) {
+  return strndup(pair.value, pair.value_length);
+}
+
 static void cookies_pair_trim_whitespace(cookies_pair_t *pair) {
     while (isspace(*pair->key)) {
         pair->key++;
@@ -73,7 +81,7 @@ int cookies_parse(const char* text, cookie_handler_t handler, void *userdata) {
     return 0;
 }
 
-static typedef struct {
+typedef struct {
     const char *key;
     char *value;
 } cookies_lookup_t;
@@ -81,7 +89,7 @@ static typedef struct {
 static int cookies_handle_lookup(const cookies_pair_t pair, void *data) {
     cookies_lookup_t *lookup = (cookies_lookup_t*)data;
     if (strncmp(lookup->key, pair.key, pair.key_length) == 0) {
-        lookup->value = strndup(pair.value, pair.value_length);
+        lookup->value = cookies_pair_value(pair);
         return 1;
     }
     return 0;
