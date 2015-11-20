@@ -18,20 +18,20 @@ static char *cookies_pair_value(cookies_pair_t pair) {
   return strndup(pair.value, pair.value_length);
 }
 
-static void cookies_pair_trim_whitespace(cookies_pair_t *pair) {
-    while (isspace(*pair->key)) {
-        pair->key++;
-        pair->key_length--;
+static void cookies_pair_trim_whitespace(cookies_pair_t pair) {
+    while (isspace(*pair.key)) {
+        pair.key++;
+        pair.key_length--;
     }
-    while (isspace(pair->key[pair->key_length - 1])) {
-        pair->key_length--;
+    while (isspace(pair.key[pair.key_length - 1])) {
+        pair.key_length--;
     }
-    while (isspace(*pair->value)) {
-        pair->value++;
-        pair->value_length--;
+    while (isspace(*pair.value)) {
+        pair.value++;
+        pair.value_length--;
     }
-    while (isspace(pair->value[pair->value_length - 1])) {
-        pair->value_length--;
+    while (isspace(pair.value[pair.value_length - 1])) {
+        pair.value_length--;
     }
 }
 
@@ -66,7 +66,7 @@ int cookies_parse(const char* text, cookie_handler_t handler, void *userdata) {
         pair.value_length = (size_t)(value_end - pair.value);
 
         // trim whitespace
-        cookies_pair_trim_whitespace(&pair);
+        cookies_pair_trim_whitespace(pair);
 
         // invoke callback
         int res = handler(pair, userdata);
