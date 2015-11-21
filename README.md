@@ -6,7 +6,7 @@ Usage Example:
 
 ``` c
 #include <stdio.h>
-#include <cookies.h>
+#include "cookies.h"
 
 const char *cookies = "__utmc=1; logged_in=yes; tz=America%2FNew_York";
 
